@@ -12,6 +12,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.corbin.tcpm.format.AbstractFormat;
+import com.corbin.tcpm.format.CommonFormat;
+
 /**
  * tcp报文解析属性注解
  * 
@@ -29,10 +32,16 @@ public @interface MsgAttrAnno {
 	int index();
 
 	/**
-	 * 字节长度,该属性解析的字节长度
+	 * 序列化模版
 	 * 
 	 * @return
 	 */
-	int byteLength();
+	Class<? extends AbstractFormat> format() default CommonFormat.class;
 
+	/**
+	 * format的动态参数
+	 * 
+	 * @return
+	 */
+	String formatParam() default "";
 }

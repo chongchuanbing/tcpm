@@ -9,6 +9,9 @@ package com.corbin.tcpm;
 import java.util.Date;
 
 import com.corbin.tcpm.annotation.MsgAttrAnno;
+import com.corbin.tcpm.format.DateFormat;
+import com.corbin.tcpm.format.IntegerFormat;
+import com.corbin.tcpm.format.StringFormat;
 import com.corbin.tcpm.message.AbstractMessage;
 
 /**
@@ -16,13 +19,13 @@ import com.corbin.tcpm.message.AbstractMessage;
  */
 public class TestMessage extends AbstractMessage {
 
-	@MsgAttrAnno(byteLength = 2, index = 1)
+	@MsgAttrAnno(index = 1, format = IntegerFormat.class)
 	private Integer id;
 
-	@MsgAttrAnno(byteLength = 11, index = 2)
+	@MsgAttrAnno(index = 2, format = StringFormat.class)
 	private String name;
 
-	@MsgAttrAnno(byteLength = 19, index = 3)
+	@MsgAttrAnno(index = 3, format = DateFormat.class, formatParam = "yyyy-MM-dd HH:mm:ss")
 	private Date createTime;
 
 	public Integer getId() {

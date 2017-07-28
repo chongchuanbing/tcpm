@@ -11,7 +11,7 @@ package com.corbin.tcpm.message;
  * 
  * @author chong
  */
-public abstract class Message {
+public interface Message {
 
 	/**
 	 * 获取对象的字节数组
