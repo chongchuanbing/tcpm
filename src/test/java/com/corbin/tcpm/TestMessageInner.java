@@ -9,7 +9,6 @@ package com.corbin.tcpm;
 import java.util.Date;
 
 import com.corbin.tcpm.annotation.MsgAttrAnno;
-import com.corbin.tcpm.annotation.MsgClassAnno;
 import com.corbin.tcpm.format.DateFormat;
 import com.corbin.tcpm.format.IntegerFormat;
 import com.corbin.tcpm.format.StringFormat;
@@ -20,7 +19,7 @@ import com.corbin.tcpm.message.AbstractMessage;
  * 
  * @author chong
  */
-public class TestMessage extends AbstractMessage {
+public class TestMessageInner extends AbstractMessage {
 
 	@MsgAttrAnno(index = 1, format = IntegerFormat.class)
 	private Integer id;
@@ -31,9 +30,6 @@ public class TestMessage extends AbstractMessage {
 	@MsgAttrAnno(index = 3, format = DateFormat.class, formatParam = "yyyy-MM-dd HH:mm:ss")
 	private Date createTime;
 	
-	@MsgClassAnno(index = 4)
-	private TestMessageInner testMsg; 
-
 	public Integer getId() {
 		return id;
 	}
@@ -56,14 +52,6 @@ public class TestMessage extends AbstractMessage {
 
 	public void setCreateTime(Date createTime) {
 		this.createTime = createTime;
-	}
-
-	public TestMessageInner getTestMsg() {
-		return testMsg;
-	}
-
-	public void setTestMsg(TestMessageInner testMsg) {
-		this.testMsg = testMsg;
 	}
 
 }

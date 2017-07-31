@@ -18,6 +18,7 @@ import java.util.List;
 
 import com.corbin.tcpm.annotation.MsgAttrAnno;
 import com.corbin.tcpm.annotation.MsgClassAnno;
+import com.corbin.tcpm.constant.CommonConstant;
 import com.corbin.tcpm.constant.MsgAnnoConstant;
 
 /**
@@ -26,6 +27,7 @@ import com.corbin.tcpm.constant.MsgAnnoConstant;
  * @author chong
  */
 public class FieldUtil {
+
 	/**
 	 * 解析报文解析属性
 	 * 
@@ -33,7 +35,9 @@ public class FieldUtil {
 	 * @param fieldLinkedList
 	 * @param byteBuffer
 	 */
-	public static void repeatGetObjAttr(Object obj, LinkedList<Field> fieldLinkedList, ByteBuffer byteBuffer) {
+	public static void repeatGetObjAttr(Object obj, LinkedList<Field> fieldLinkedList, ByteBuffer byteBuffer,
+			boolean bSerialize) {
+		
 		// 迭代获取进行报文解析的属性
 
 		Field[] fieldArr = obj.getClass().getDeclaredFields();
@@ -55,17 +59,41 @@ public class FieldUtil {
 				// if (doJudgeCommonType(fieldItem)) {
 				if (null != msgAttrAnno) {
 
-					// 这边的field肯定都是基础类型，直接按照注解配置规则解析为byte即可
-					byte[] bytes = ByteUtil.parseField(obj, fieldItem);
-					byteBuffer.put(bytes);
+					if (bSerialize) {
+
+						Object objInner = refectGetObj(obj, fieldItem, false);
+
+						// 这边的field肯定都是基础类型，直接按照注解配置规则解析为byte即可
+						byte[] bytes = ByteUtil.serializeFieldFormat(objInner, fieldItem);
+						if (null == bytes) {
+							throw new RuntimeException(
+									"the format serialize return null. the fieldName [" + fieldItem.getName() + "].");
+						}
+						if (byteBuffer.capacity() - byteBuffer.position() < bytes.length) {
+							// 缓冲区容量不足
+							ByteBuffer byteBufNew = ByteBuffer
+									.allocateDirect(byteBuffer.capacity() + CommonConstant.CAPACITY_SIZE);
+							byteBufNew.put(byteBuffer);
+							
+							byteBuffer = byteBufNew.duplicate();
+						}
+
+						byteBuffer.put(bytes);
+					} else {
+						// 反序列化
+						ByteUtil.deserializeFieldFormat(obj, fieldItem, byteBuffer);
+					}
 
 					// 如果是基础类型，根据配置的解析索引，放入解析属性列表(因为属性已经进行过排序，所以这边不需要管配置的索引，直接放入结合就好)
 					fieldLinkedList.add(fieldItem);
 				} else {
 
-					Object objInner = refectGetObj(obj, fieldItem);
+					Object objInner = refectGetObj(obj, fieldItem, true);
+					if (null == objInner) {
+						throw new RuntimeException("cannot instance the obj [" + fieldItem.getName() + "]");
+					}
 
-					repeatGetObjAttr(objInner, fieldLinkedList, byteBuffer);
+					repeatGetObjAttr(objInner, fieldLinkedList, byteBuffer, bSerialize);
 				}
 			}
 		}
@@ -78,7 +106,7 @@ public class FieldUtil {
 	 * @param field
 	 * @return
 	 */
-	private static Object refectGetObj(Object obj, Field field) {
+	private static Object refectGetObj(Object obj, Field field, boolean bNeedInstace) {
 		String fieldName = field.getName();
 		String methodName = "get" + StringUtil.toUpperCaseFirstOne(fieldName);
 
@@ -103,7 +131,59 @@ public class FieldUtil {
 			throw new RuntimeException(e);
 		}
 
+		if (null == objInner && bNeedInstace) {
+			objInner = instanceObj(field.getType());
+			refectSetObj(obj, field, objInner);
+		}
+
 		return objInner;
+	}
+
+	/**
+	 * class实例化对象
+	 * 
+	 * @param clasz
+	 * @return
+	 */
+	private static Object instanceObj(Class<?> clasz) {
+		try {
+			return clasz.newInstance();
+		} catch (InstantiationException e) {
+			throw new RuntimeException(e);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * 
+	 * @param obj
+	 * @param field
+	 * @return
+	 */
+	public static void refectSetObj(Object obj, Field field, Object objAttr) {
+		String fieldName = field.getName();
+		String methodName = "set" + StringUtil.toUpperCaseFirstOne(fieldName);
+
+		Method method = null;
+
+		try {
+			method = obj.getClass().getDeclaredMethod(methodName, objAttr.getClass());
+		} catch (NoSuchMethodException e) {
+			throw new RuntimeException(e);
+		} catch (SecurityException e) {
+			throw new RuntimeException(e);
+		}
+
+		try {
+			method.invoke(obj, objAttr);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException(e);
+		} catch (IllegalArgumentException e) {
+			throw new RuntimeException(e);
+		} catch (InvocationTargetException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**

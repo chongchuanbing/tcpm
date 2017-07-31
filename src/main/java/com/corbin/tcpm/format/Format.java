@@ -6,6 +6,8 @@
  */
 package com.corbin.tcpm.format;
 
+import java.nio.ByteBuffer;
+
 /**
  * 报文解析属性格式化接口
  * 
@@ -23,9 +25,9 @@ public interface Format {
 	/**
 	 * 字节报文转对象
 	 * 
-	 * @param bytes
+	 * @param byteBuffer
 	 * @return
 	 */
-	public Object deserialize(byte[] bytes, String formatParam);
+	public Object deserialize(ByteBuffer byteBuffer, String formatParam);
 
 }

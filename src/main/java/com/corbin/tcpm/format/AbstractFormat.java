@@ -11,6 +11,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
 
 /**
  * 抽象报文format
@@ -38,10 +39,10 @@ public abstract class AbstractFormat implements Format {
 	}
 
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
+	public Object deserialize(ByteBuffer byteBuffer, String formatParam) {
 		Object obj = null;
 		try {
-			ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+			ByteArrayInputStream bis = new ByteArrayInputStream(byteBuffer.array());
 			ObjectInputStream ois = new ObjectInputStream(bis);
 			obj = ois.readObject();
 			ois.close();

@@ -20,12 +20,12 @@ public class DateFormat extends AbstractFormat {
 
 	@Override
 	public byte[] serialize(Object obj, String formatParam) {
-		if (null == obj) {
-			return null;
-		}
-
 		if (null == formatParam || "".equals(formatParam)) {
-			return null;
+			throw new RuntimeException("cannot get String length.");
+		}
+		
+		if (null == obj) {
+			return new byte[formatParam.length()];
 		}
 
 		if (obj instanceof Date) {
@@ -43,15 +43,19 @@ public class DateFormat extends AbstractFormat {
 
 			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(objStr.length());
 			byteBuffer.put(bytes);
+			
+			byteBuffer.flip();
+			byte[] byteRe = new byte[formatParam.length()];
+			byteBuffer.get(byteRe);
 
-			return byteBuffer.array();
+			return byteRe;
 		}
 		return null;
 	}
 
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
-		if (null == bytes) {
+	public Object deserialize(ByteBuffer byteBuf, String formatParam) {
+		if (null == byteBuf) {
 			return null;
 		}
 
@@ -61,18 +65,19 @@ public class DateFormat extends AbstractFormat {
 
 		int length = formatParam.length();
 
+		byte[] bytes = new byte[length];
+
 		String objStr = null;
-		if (length >= bytes.length) {
-			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-			byteBuffer.put(bytes);
-			byteBuffer.put(new byte[length - bytes.length]);
+		if (length > byteBuf.remaining()) {
+			byte[] byteTemp = new byte[byteBuf.remaining()];
+			
+			byteBuf.get(byteTemp);
 
-			objStr = new String(byteBuffer.array());
+			objStr = new String(byteTemp);
 		} else {
-			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-			byteBuffer.put(bytes, 0, length);
+			byteBuf.get(bytes);
 
-			objStr = new String(byteBuffer.array());
+			objStr = new String(bytes);
 		}
 
 		return DateUtil.str2DateTime(objStr);

@@ -6,6 +6,8 @@
  */
 package com.corbin.tcpm.format;
 
+import java.nio.ByteBuffer;
+
 /**
  * 
  * @author chong
@@ -19,9 +21,9 @@ public class LongFormat extends AbstractFormat {
 	}
 
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
+	public Object deserialize(ByteBuffer byteBuf, String formatParam) {
 		// TODO Auto-generated method stub
-		return super.deserialize(bytes, formatParam);
+		return super.deserialize(byteBuf, formatParam);
 	}
 	
 }

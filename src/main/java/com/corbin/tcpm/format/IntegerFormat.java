@@ -19,31 +19,31 @@ public class IntegerFormat extends AbstractFormat {
 	
 	@Override
 	public byte[] serialize(Object obj, String formatParam) {
-		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(INTEGER_BYTE_LENGTH);
-
 		if (null == obj) {
-			return byteBuffer.array();
+			return new byte[INTEGER_BYTE_LENGTH];
 		}
 
+		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(INTEGER_BYTE_LENGTH);
 		if (obj instanceof Integer) {
 			Integer objInt = (Integer) obj;
-			byteBuffer.putShort(objInt.shortValue());
+			byteBuffer.putInt(objInt);
 		}
+		
+		byteBuffer.flip();
+		byte[] bytes = new byte[INTEGER_BYTE_LENGTH];
+		byteBuffer.get(bytes);
 
-		return byteBuffer.array();
+		return bytes;
 	}
 	
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
-		if (null == bytes) {
+	public Object deserialize(ByteBuffer byteBuf, String formatParam) {
+		if (null == byteBuf) {
 			return null;
 		}
 
-		if (INTEGER_BYTE_LENGTH <= bytes.length) {
-			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(INTEGER_BYTE_LENGTH);
-			byteBuffer.put(bytes, 0, INTEGER_BYTE_LENGTH);
-
-			return byteBuffer.getInt();
+		if (INTEGER_BYTE_LENGTH <= byteBuf.remaining()) {
+			return byteBuf.getInt();
 		}
 		return null;
 	}

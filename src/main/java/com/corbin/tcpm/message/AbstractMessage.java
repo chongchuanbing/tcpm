@@ -25,7 +25,13 @@ public abstract class AbstractMessage implements Message {
 	@Override
 	public byte[] getBytes() {
 		ByteBuffer byteBuffer = ByteUtil.getByte(this);
-		return byteBuffer.array();
+		
+		byte[] bytes = new byte[byteBuffer.position()];
+		byteBuffer.flip();
+		
+		byteBuffer.get(bytes);
+		
+		return bytes;
 	}
 
 	/**
@@ -36,12 +42,7 @@ public abstract class AbstractMessage implements Message {
 	 */
 	@Override
 	public AbstractMessage getObj(byte[] bytes) {
-
-		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(bytes.length);
-
-		// TODO
-
-		return this;
+		return ByteUtil.getObj(this, bytes);
 	}
 
 }

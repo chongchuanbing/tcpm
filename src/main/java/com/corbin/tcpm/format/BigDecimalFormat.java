@@ -6,21 +6,43 @@
  */
 package com.corbin.tcpm.format;
 
+import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+
 /**
  * @author chong
  */
 public class BigDecimalFormat extends AbstractFormat {
 
+	private static int FLOAT_BYTE_LENGTH = 4;
+
 	@Override
 	public byte[] serialize(Object obj, String formatParam) {
-		// TODO Auto-generated method stub
-		return super.serialize(obj, formatParam);
+		if (null == obj) {
+			return new byte[FLOAT_BYTE_LENGTH];
+		}
+		if (obj instanceof BigDecimal) {
+
+			BigDecimal objDecimal = (BigDecimal) obj;
+
+			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(FLOAT_BYTE_LENGTH);
+			byteBuffer.putFloat(objDecimal.floatValue());
+
+			return byteBuffer.array();
+		}
+		return null;
 	}
 
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
-		// TODO Auto-generated method stub
-		return super.deserialize(bytes, formatParam);
+	public Object deserialize(ByteBuffer byteBuffer, String formatParam) {
+		if (null == byteBuffer) {
+			return null;
+		}
+
+		if (FLOAT_BYTE_LENGTH <= byteBuffer.remaining()) {
+			return byteBuffer.getShort();
+		}
+		return null;
 	}
 
 }

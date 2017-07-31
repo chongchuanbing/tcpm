@@ -17,39 +17,48 @@ public class StringFormat extends AbstractFormat {
 
 	@Override
 	public byte[] serialize(Object obj, String formatParam) {
-		if (null == obj) {
-			return null;
+		if (null == formatParam || "".equals(formatParam)) {
+			throw new RuntimeException("cannot get String length.");
+		}
+		
+		int length = 0;
+		try {
+			length = Integer.valueOf(formatParam);
+		} catch (NumberFormatException e) {
+			throw new RuntimeException(e);
 		}
 
-		if (null == formatParam || "".equals(formatParam)) {
-			return null;
+		if (null == obj) {
+			return new byte[length];
 		}
 
 		if (obj instanceof String) {
 
 			String objStr = (String) obj;
 
-			int length = 0;
-			try {
-				length = Integer.valueOf(formatParam);
-			} catch (NumberFormatException e) {
-				throw new RuntimeException(e);
-			}
-
 			byte[] bytes = objStr.getBytes();
 
 			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-			byteBuffer.put(bytes, 0, length);
+			if (length >= bytes.length) {
+				byteBuffer.put(bytes);
+				byteBuffer.put(new byte[length - bytes.length]);
+			} else {
+				byteBuffer.put(bytes, 0, length);
+			}
+			
+			byteBuffer.flip();
+			byte[] byteRe = new byte[length];
+			byteBuffer.get(byteRe);
 
-			return byteBuffer.array();
+			return byteRe;
 		}
 		return null;
 	}
 
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
+	public Object deserialize(ByteBuffer byteBuf, String formatParam) {
 
-		if (null == bytes) {
+		if (null == byteBuf) {
 			return null;
 		}
 
@@ -64,17 +73,15 @@ public class StringFormat extends AbstractFormat {
 			throw new RuntimeException(e);
 		}
 
-		if (length >= bytes.length) {
-			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-			byteBuffer.put(bytes);
-			byteBuffer.put(new byte[length - bytes.length]);
+		byte[] bytes = new byte[length];
+		if (length >= byteBuf.remaining()) {
+			byteBuf.get(byteBuf.remaining());
 
-			return new String(byteBuffer.array());
+			return new String(bytes);
 		} else {
-			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-			byteBuffer.put(bytes, 0, length);
+			byteBuf.get(bytes);
 
-			return new String(byteBuffer.array());
+			return new String(bytes);
 		}
 	}
 

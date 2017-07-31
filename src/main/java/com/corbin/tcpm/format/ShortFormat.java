@@ -20,12 +20,11 @@ public class ShortFormat extends AbstractFormat {
 
 	@Override
 	public byte[] serialize(Object obj, String formatParam) {
-		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(SHORT_BYTE_LENGTH);
-
 		if (null == obj) {
-			return byteBuffer.array();
+			return new byte[SHORT_BYTE_LENGTH];
 		}
 
+		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(SHORT_BYTE_LENGTH);
 		if (obj instanceof Integer) {
 			Integer objInt = (Integer) obj;
 			byteBuffer.putShort(objInt.shortValue());
@@ -33,21 +32,22 @@ public class ShortFormat extends AbstractFormat {
 			Short objShort = (Short) obj;
 			byteBuffer.putShort(objShort);
 		}
+		
+		byteBuffer.slice();
+		byte[] bytes = new byte[SHORT_BYTE_LENGTH];
+		byteBuffer.get(bytes);
 
-		return byteBuffer.array();
+		return bytes;
 	}
 
 	@Override
-	public Object deserialize(byte[] bytes, String formatParam) {
-		if (null == bytes) {
+	public Object deserialize(ByteBuffer byteBuf, String formatParam) {
+		if (null == byteBuf) {
 			return null;
 		}
 
-		if (SHORT_BYTE_LENGTH <= bytes.length) {
-			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(SHORT_BYTE_LENGTH);
-			byteBuffer.put(bytes, 0, SHORT_BYTE_LENGTH);
-
-			return byteBuffer.getShort();
+		if (SHORT_BYTE_LENGTH <= byteBuf.remaining()) {
+			return byteBuf.getShort();
 		}
 		return null;
 	}
