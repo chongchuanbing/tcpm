@@ -9,17 +9,20 @@ package com.corbin.tcpm.util;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.corbin.tcpm.annotation.MsgAttrAnno;
 import com.corbin.tcpm.annotation.MsgClassAnno;
+import com.corbin.tcpm.annotation.MsgCountDepAnno;
 import com.corbin.tcpm.constant.CommonConstant;
 import com.corbin.tcpm.constant.MsgAnnoConstant;
+import com.corbin.tcpm.message.AbstractMessage;
 
 /**
  * 属性工具类
@@ -35,9 +38,8 @@ public class FieldUtil {
 	 * @param fieldLinkedList
 	 * @param byteBuffer
 	 */
-	public static void repeatGetObjAttr(Object obj, LinkedList<Field> fieldLinkedList, ByteBuffer byteBuffer,
-			boolean bSerialize) {
-		
+	public static void repeatGetObjAttr(Object obj, ByteBuffer byteBuffer, boolean bSerialize) {
+
 		// 迭代获取进行报文解析的属性
 
 		Field[] fieldArr = obj.getClass().getDeclaredFields();
@@ -53,50 +55,148 @@ public class FieldUtil {
 			sortField(fieldList);
 
 			for (Field fieldItem : fieldList) {
-
-				MsgAttrAnno msgAttrAnno = fieldItem.getAnnotation(MsgAttrAnno.class);
-
-				// if (doJudgeCommonType(fieldItem)) {
-				if (null != msgAttrAnno) {
-
-					if (bSerialize) {
-
-						Object objInner = refectGetObj(obj, fieldItem, false);
-
-						// 这边的field肯定都是基础类型，直接按照注解配置规则解析为byte即可
-						byte[] bytes = ByteUtil.serializeFieldFormat(objInner, fieldItem);
-						if (null == bytes) {
-							throw new RuntimeException(
-									"the format serialize return null. the fieldName [" + fieldItem.getName() + "].");
-						}
-						if (byteBuffer.capacity() - byteBuffer.position() < bytes.length) {
-							// 缓冲区容量不足
-							ByteBuffer byteBufNew = ByteBuffer
-									.allocateDirect(byteBuffer.capacity() + CommonConstant.CAPACITY_SIZE);
-							byteBufNew.put(byteBuffer);
-							
-							byteBuffer = byteBufNew.duplicate();
-						}
-
-						byteBuffer.put(bytes);
-					} else {
-						// 反序列化
-						ByteUtil.deserializeFieldFormat(obj, fieldItem, byteBuffer);
-					}
-
-					// 如果是基础类型，根据配置的解析索引，放入解析属性列表(因为属性已经进行过排序，所以这边不需要管配置的索引，直接放入结合就好)
-					fieldLinkedList.add(fieldItem);
+				if (bSerialize) {
+					serializeSingleObj(obj, fieldItem, byteBuffer);
 				} else {
-
-					Object objInner = refectGetObj(obj, fieldItem, true);
-					if (null == objInner) {
-						throw new RuntimeException("cannot instance the obj [" + fieldItem.getName() + "]");
-					}
-
-					repeatGetObjAttr(objInner, fieldLinkedList, byteBuffer, bSerialize);
+					deserializeSingleObj(obj, fieldItem, byteBuffer);
 				}
 			}
 		}
+	}
+
+	/**
+	 * 反序列化对象
+	 * 
+	 * @param obj
+	 * @param fieldItem
+	 * @param fieldLinkedList
+	 * @param byteBuffer
+	 */
+	private static void deserializeSingleObj(Object obj, Field fieldItem, ByteBuffer byteBuffer) {
+		if (doJudgeCommonType(fieldItem)) {
+			// 反序列化
+			ByteUtil.deserializeFieldFormat(obj, fieldItem, byteBuffer);
+		} else {
+			Object objInner = refectGetObj(obj, fieldItem, true);
+			if (null == objInner) {
+				throw new RuntimeException("cannot instance the obj [" + fieldItem.getName() + "]");
+			}
+
+			if (objInner instanceof List) {
+				// 集合对象,需要知道集合的大小，读取依赖的属性
+				MsgCountDepAnno msgCountDepAnno = fieldItem.getAnnotation(MsgCountDepAnno.class);
+				if (null == msgCountDepAnno) {
+					throw new RuntimeException("cannot get the annotation [" + MsgCountDepAnno.class.getName() + "]");
+				}
+
+				String attrName = msgCountDepAnno.attrName();
+				if (null == attrName || "".equals(attrName)) {
+					throw new RuntimeException(
+							"the annotation [" + MsgCountDepAnno.class.getName() + " cannot point related attribute.]");
+				}
+
+				Object objRelated = refectGetObj(obj, attrName, true);
+				if (objRelated instanceof Integer) {
+					Integer count = (Integer) objRelated;
+					for (int i = 0; i < count; i++) {
+						// 普通对象
+						Type genericType = fieldItem.getGenericType();
+
+						if (genericType == null)
+							continue;
+						// 如果是泛型参数的类型
+						if (genericType instanceof ParameterizedType) {
+							ParameterizedType pt = (ParameterizedType) genericType;
+							// 得到泛型里的class类型对象
+							Class<?> genericClazz = (Class<?>) pt.getActualTypeArguments()[0];
+
+							Object typeObj = instanceObj(genericClazz);
+
+							repeatGetObjAttr(typeObj, byteBuffer, false);
+
+							((List) objInner).add(typeObj);
+						}
+					}
+				}
+
+			} else {
+				// 普通对象
+				repeatGetObjAttr(objInner, byteBuffer, false);
+			}
+		}
+	}
+
+	/**
+	 * 系列化对象
+	 * 
+	 * @param obj
+	 * @param fieldItem
+	 * @param fieldLinkedList
+	 * @param byteBuffer
+	 */
+	private static void serializeSingleObj(Object obj, Field fieldItem, ByteBuffer byteBuffer) {
+		if (doJudgeCommonType(fieldItem)) {
+
+			Object objInner = refectGetObj(obj, fieldItem, false);
+
+			// 这边的field肯定都是基础类型，直接按照注解配置规则解析为byte即可
+			byte[] bytes = ByteUtil.serializeFieldFormat(objInner, fieldItem);
+			if (null == bytes) {
+				throw new RuntimeException(
+						"the format serialize return null. the fieldName [" + fieldItem.getName() + "].");
+			}
+			if (byteBuffer.capacity() - byteBuffer.position() < bytes.length) {
+				// 缓冲区容量不足
+				ByteBuffer byteBufNew = ByteBuffer.allocateDirect(byteBuffer.capacity() + CommonConstant.CAPACITY_SIZE);
+				byteBufNew.put(byteBuffer);
+
+				byteBuffer = byteBufNew.duplicate();
+			}
+
+			byteBuffer.put(bytes);
+		} else {
+
+			Object objInner = refectGetObj(obj, fieldItem, true);
+			if (null == objInner) {
+				throw new RuntimeException("cannot instance the obj [" + fieldItem.getName() + "]");
+			}
+
+			if (objInner instanceof List) {
+
+				List<?> objList = (List<?>) objInner;
+				for (Object objItem : objList) {
+					repeatGetObjAttr(objItem, byteBuffer, true);
+				}
+			} else {
+				repeatGetObjAttr(objInner, byteBuffer, true);
+			}
+		}
+	}
+
+	/**
+	 * 根据属性field反射获取指定对象该属性的对象
+	 * 
+	 * @param obj
+	 * @param fieldName
+	 * @param bNeedInstace
+	 * @return
+	 */
+	private static Object refectGetObj(Object obj, String fieldName, boolean bNeedInstace) {
+
+		Field field = null;
+		try {
+			field = obj.getClass().getDeclaredField(fieldName);
+		} catch (NoSuchFieldException e) {
+			throw new RuntimeException(e);
+		} catch (SecurityException e) {
+			throw new RuntimeException(e);
+		}
+
+		if (null == field) {
+			return null;
+		}
+
+		return refectGetObj(obj, field, bNeedInstace);
 	}
 
 	/**
@@ -146,16 +246,21 @@ public class FieldUtil {
 	 * @return
 	 */
 	private static Object instanceObj(Class<?> clasz) {
-		try {
-			return clasz.newInstance();
-		} catch (InstantiationException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
+		if (clasz.getTypeName().equals("java.util.List")) {
+			return new ArrayList<AbstractMessage>();
+		} else {
+			try {
+				return clasz.newInstance();
+			} catch (InstantiationException e) {
+				throw new RuntimeException(e);
+			} catch (IllegalAccessException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 
 	/**
+	 * 对象放入值
 	 * 
 	 * @param obj
 	 * @param field
@@ -165,24 +270,20 @@ public class FieldUtil {
 		String fieldName = field.getName();
 		String methodName = "set" + StringUtil.toUpperCaseFirstOne(fieldName);
 
-		Method method = null;
-
-		try {
-			method = obj.getClass().getDeclaredMethod(methodName, objAttr.getClass());
-		} catch (NoSuchMethodException e) {
-			throw new RuntimeException(e);
-		} catch (SecurityException e) {
-			throw new RuntimeException(e);
-		}
-
-		try {
-			method.invoke(obj, objAttr);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalArgumentException e) {
-			throw new RuntimeException(e);
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException(e);
+		Method[] methodArr = obj.getClass().getDeclaredMethods();
+		for (Method methodItem : methodArr) {
+			if (methodItem.getName().equals(methodName)) {
+				try {
+					methodItem.invoke(obj, objAttr);
+				} catch (IllegalAccessException e) {
+					throw new RuntimeException(e);
+				} catch (IllegalArgumentException e) {
+					throw new RuntimeException(e);
+				} catch (InvocationTargetException e) {
+					throw new RuntimeException(e);
+				}
+				return;
+			}
 		}
 	}
 
@@ -312,9 +413,9 @@ public class FieldUtil {
 	 * @return
 	 */
 	public static boolean doJudgeCommonType(Field field) {
-		// TODO 判断一个属性是否是java内置类型
+		// 判断一个属性是否是java内置类型
 		Class<?> clasz = field.getType();
 
-		return true;
+		return CommonConstant.commonTypeSet.contains(clasz.getName());
 	}
 }

@@ -6,9 +6,11 @@
  */
 package com.corbin.tcpm.annotation;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * tcp报文解析类注解(组合关系使用)
@@ -17,6 +19,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
 public @interface MsgClassAnno {
 	/**
 	 * 解析位置,从1开始

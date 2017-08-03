@@ -6,7 +6,9 @@
  */
 package com.corbin.tcpm;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author chong
@@ -25,6 +27,19 @@ public class MsgAnnoTest {
 		testMsgInner.setCreateTime(new Date());
 
 		testMsg.setTestMsg(testMsgInner);
+		
+		List<TestMessageInner> testMsgList = new ArrayList<>();
+		
+		TestMessageInner testMsgInner1 = new TestMessageInner();
+		testMsgInner1.setId(15);
+		testMsgInner1.setName("test44");
+		testMsgInner1.setCreateTime(new Date());
+		
+		testMsgList.add(testMsgInner1);
+		testMsg.setTestMsgList(testMsgList);
+		
+		testMsg.setCount(testMsgList.size());
+		
 		
 		byte[] bytes = testMsg.getBytes();
 

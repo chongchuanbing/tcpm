@@ -12,7 +12,6 @@ import java.io.ObjectOutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-import java.util.LinkedList;
 
 import com.corbin.tcpm.annotation.MsgAttrAnno;
 import com.corbin.tcpm.constant.CommonConstant;
@@ -34,13 +33,11 @@ public class ByteUtil {
 	 * @return
 	 */
 	public static ByteBuffer getByte(Object obj) {
-		
+
 		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(CommonConstant.CAPACITY_SIZE);
-		
-		LinkedList<Field> fieldLinkedList = new LinkedList<>();
 
 		// 迭代获取报文
-		FieldUtil.repeatGetObjAttr(obj, fieldLinkedList, byteBuffer, true);
+		FieldUtil.repeatGetObjAttr(obj, byteBuffer, true);
 
 		return byteBuffer;
 	}
@@ -57,10 +54,8 @@ public class ByteUtil {
 		byteBuffer.put(bytes);
 		byteBuffer.flip();
 
-		LinkedList<Field> fieldLinkedList = new LinkedList<>();
-
 		// 迭代获取报文
-		FieldUtil.repeatGetObjAttr(obj, fieldLinkedList, byteBuffer, false);
+		FieldUtil.repeatGetObjAttr(obj, byteBuffer, false);
 
 		return obj;
 	}
@@ -135,9 +130,9 @@ public class ByteUtil {
 		if (null == objInner) {
 			throw new RuntimeException("the attribute [" + fieldItem.getName() + "] cannot deserialize.");
 		}
-		
+
 		FieldUtil.refectSetObj(obj, fieldItem, objInner);
-		
+
 	}
 
 	/**

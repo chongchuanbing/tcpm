@@ -7,9 +7,10 @@
 package com.corbin.tcpm;
 
 import java.util.Date;
+import java.util.List;
 
 import com.corbin.tcpm.annotation.MsgAttrAnno;
-import com.corbin.tcpm.annotation.MsgClassAnno;
+import com.corbin.tcpm.annotation.MsgCountDepAnno;
 import com.corbin.tcpm.format.DateFormat;
 import com.corbin.tcpm.format.IntegerFormat;
 import com.corbin.tcpm.format.StringFormat;
@@ -31,8 +32,15 @@ public class TestMessage extends AbstractMessage {
 	@MsgAttrAnno(index = 3, format = DateFormat.class, formatParam = "yyyy-MM-dd HH:mm:ss")
 	private Date createTime;
 	
-	@MsgClassAnno(index = 4)
-	private TestMessageInner testMsg; 
+	@MsgAttrAnno(index = 4)
+	private TestMessageInner testMsg;
+	
+	@MsgAttrAnno(index = 5, format = IntegerFormat.class, formatParam = "yyyy-MM-dd HH:mm:ss")
+	private Integer count;
+	
+	@MsgAttrAnno(index = 6)
+	@MsgCountDepAnno(attrName="count")
+	private List<TestMessageInner> testMsgList;
 
 	public Integer getId() {
 		return id;
@@ -64,6 +72,22 @@ public class TestMessage extends AbstractMessage {
 
 	public void setTestMsg(TestMessageInner testMsg) {
 		this.testMsg = testMsg;
+	}
+
+	public List<TestMessageInner> getTestMsgList() {
+		return testMsgList;
+	}
+
+	public void setTestMsgList(List<TestMessageInner> testMsgList) {
+		this.testMsgList = testMsgList;
+	}
+
+	public Integer getCount() {
+		return count;
+	}
+
+	public void setCount(Integer count) {
+		this.count = count;
 	}
 
 }
